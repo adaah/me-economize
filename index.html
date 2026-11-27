@@ -589,7 +589,7 @@ function formCompra(c){
 <div class="addp" id="fAdd" hidden><input class="inp" id="fNome" placeholder="Nome" aria-label="Nome da pessoa"><button class="btn dark" data-act="fAddOk" style="height:44px">Adicionar</button></div></section>
 <div class="amtbox"><input class="amtin" id="fAmt" inputmode="numeric" value="${brl(F.cents/100)}" aria-label="Valor total"><div class="hint" id="fHint"></div></div>
 <section class="panel"><input class="inp" id="fDesc" list="fDl" placeholder="O que foi? Ex.: Renner, Uber…" value="${esc(F.desc)}" aria-label="Descrição"><datalist id="fDl">${descs.map(d=>`<option value="${esc(d)}">`).join('')}</datalist>
-<div class="lbl" style="margin-top:14px">Parcelas</div><div class="filter" id="fParc">${[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>`<button class="chip lime ${F.parc===n?'on':''}" data-act="fParc" data-n="${n}">${n}x</button>`).join('')}</div>
+<div class="lbl" style="margin-top:14px">Parcelas</div><div class="filter" id="fParc">${[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>`<button class="chip lime ${F.parc===n?'on':''}" data-act="fParc" data-n="${n}">${n}x</button>`).join('')}<button class="chip lime ${F.parc>12?'on':''}" id="fParcMais" data-act="fParcMais" aria-label="Mais parcelas">${F.parc>12?F.parc+'x':'+'}</button></div><div id="fParcBox" style="display:${F.parc>12?'flex':'none'};align-items:center;gap:10px;margin:2px 0 4px"><span style="font-size:13px;color:var(--mute)">Quantas parcelas?</span><input class="inp" id="fParcN" type="text" inputmode="numeric" maxlength="3" placeholder="ex: 18" value="${F.parc>12?F.parc:''}" style="width:90px;height:36px;text-align:center;font-size:15px"><span style="font-size:14px;color:var(--mute)">x</span></div>
 <div class="lbl" style="margin-top:10px">Data</div><div class="filter" id="fDate"><button class="chip ${F.date===todayISO?'on':''}" data-act="fDia" data-v="${todayISO}">Hoje</button><button class="chip ${F.date===oISO?'on':''}" data-act="fDia" data-v="${oISO}">Ontem</button><input type="date" class="inp" id="fDt" value="${F.date}" style="height:36px;width:auto;border-radius:99px" aria-label="Data da compra"></div>
 <div class="lbl" style="margin-top:10px">Categoria</div><div class="filter" id="fCat"><button class="chip ${!F.cat?'on':''}" data-act="fCat" data-v="">Sem categoria</button>${cats().map(k=>`<button class="chip ${F.cat===k?'on':''}" data-act="fCat" data-v="${esc(k)}">${esc(k)}</button>`).join('')}</div>
 </section>
@@ -739,7 +739,8 @@ document.addEventListener('click',e=>{
   case'fAddOk':{const p=addPessoa($('#fNome').value);if(!p)return;save();F.dono=p;
     if(!document.querySelector(`#fPeople [data-p="${CSS.escape(p)}"]`))$('#fPeople [data-act=fNovaP]').insertAdjacentHTML('beforebegin',pChip(p));
     document.querySelectorAll('#fPeople [data-act=fP]').forEach(b=>b.classList.toggle('on',b.dataset.p===F.dono));$('#fAdd').hidden=true;$('#fNome').value='';fHint();break}
-  case'fParc':F.parc=+ds.n;document.querySelectorAll('#fParc .chip').forEach(b=>b.classList.toggle('on',+b.dataset.n===F.parc));fHint();break;
+  case'fParcMais':{const bx=$('#fParcBox'),pn=$('#fParcN');if(bx.style.display==='none'){bx.style.display='flex';pn.focus()}else if(!(F.parc>12)){bx.style.display='none'}else pn.focus()}break;
+  case'fParc':F.parc=+ds.n;{const pn=$('#fParcN'),bx=$('#fParcBox'),pm=$('#fParcMais');if(pn)pn.value='';if(bx)bx.style.display='none';if(pm){pm.textContent='+';pm.classList.remove('on')}}document.querySelectorAll('#fParc .chip').forEach(b=>b.classList.toggle('on',+b.dataset.n===F.parc));fHint();break;
   case'fDia':F.date=ds.v;$('#fDt').value=F.date;document.querySelectorAll('#fDate .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===F.date));fHint();break;
   case'fCat':F.cat=ds.v;F.catTouched=true;document.querySelectorAll('#fCat .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===F.cat));break;
   case'fSalvar':salvarCompra(!!ds.more);break;
@@ -794,6 +795,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('input',e=>{const t=e.target;
   if(t.id==='fAmt'){t.value=brl(F.cents/100);fHint()}
+  else if(t.id==='fParcN'&&F){const d=t.value.replace(/\D/g,'').slice(0,3);if(d!==t.value)t.value=d;const n=parseInt(d,10);if(n>=1){F.parc=n;document.querySelectorAll('#fParc .chip').forEach(b=>b.classList.toggle('on',+b.dataset.n===F.parc));{const pm=$('#fParcMais');pm.textContent=n>12?n+'x':'+';pm.classList.toggle('on',n>12)}fHint()}}
   else if(t.id==='fDesc'&&F){F.desc=t.value;if(!F.catTouched){const g=guess(t.value);if(g&&g.cat){F.cat=g.cat;document.querySelectorAll('#fCat .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===F.cat))}}}
   else if(t.id==='fDt'&&F&&t.value){F.date=t.value;document.querySelectorAll('#fDate .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===F.date));fHint()}
   else if(t.id==='pq'){ui.q=t.value;const pos=t.selectionStart;render();const n=$('#pq');n.focus();n.setSelectionRange(pos,pos)}
